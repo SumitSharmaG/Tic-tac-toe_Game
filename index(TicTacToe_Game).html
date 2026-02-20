@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Neon Tic Tac Toe</title>
+
+<style>
+:root {
+    --bg: #0b0b0b;
+    --panel: #141414;
+    --cell: #1f1f1f;
+    --accent: #b07a3f;
+    --x: #00fff7;
+    --o: #ffae00;
+    --glow: 0 0 15px;
+}
+
+/* NEON THEME */
+body.neon {
+    --bg: #050014;
+    --panel: #0c0030;
+    --cell: #13004f;
+    --accent: #00fff7;
+    --x: #00fff7;
+    --o: #ff00ff;
+}
+
+/* PURPLE THEME */
+body.purple {
+    --bg: #100014;
+    --panel: #200030;
+    --cell: #2b004f;
+    --accent: #b56cff;
+    --x: #b56cff;
+    --o: #ff77ff;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle, var(--panel), var(--bg));
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.container {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+}
+
+.card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 25px 50px rgba(0,0,0,.8);
+    text-align: center;
+}
+
+.hidden { display: none; }
+
+h2 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+/* BUTTONS */
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #000;
+    font-size: 16px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 20px var(--accent);
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--cell);
+    color: var(--accent);
+    font-size: 18px;
+}
+
+/* SCORE */
+.score {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+    font-size: 14px;
+    opacity: .9;
+}
+
+/* BOARD */
+.board {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 12px;
+}
+
+.cell {
+    aspect-ratio: 1;
+    background: var(--cell);
+    border-radius: 15px;
+    font-size: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.cell:hover {
+    transform: scale(1.05);
+}
+
+.cell.x {
+    color: var(--x);
+    text-shadow: var(--glow) var(--x);
+}
+
+.cell.o {
+    color: var(--o);
+    text-shadow: var(--glow) var(--o);
+}
+
+.win {
+    animation: blink .8s infinite;
+}
+
+@keyframes blink {
+    50% { background: var(--accent); }
+}
+
+/* MOBILE */
+@media(max-width:400px){
+    .cell{ font-size:38px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- START -->
+<div class="card" id="start">
+    <h2>⚡ Tic Tac Toe</h2>
+    <button onclick="startGame('pvp')">Player vs Player</button>
+    <button onclick="startGame('ai')">Player vs AI</button>
+</div>
+
+<!-- GAME -->
+<div class="card hidden" id="game">
+    <div class="header">
+        <div id="status">Player X</div>
+        <button class="icon-btn" onclick="changeTheme()">🎨</button>
+    </div>
+
+    <div class="score">
+        <div>X: <span id="sx">0</span></div>
+        <div>Draw: <span id="sd">0</span></div>
+        <div>O: <span id="so">0</span></div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <button onclick="resetBoard()">Restart</button>
+</div>
+
+</div>
+
+<script>
+let board = Array(9).fill("");
+let current = "X";
+let active = true;
+let mode = "pvp";
+let sx=0, so=0, sd=0;
+let themes = ["", "neon", "purple"];
+let t = 0;
+
+const wins = [
+ [0,1,2],[3,4,5],[6,7,8],
+ [0,3,6],[1,4,7],[2,5,8],
+ [0,4,8],[2,4,6]
+];
+
+function startGame(m){
+ mode=m;
+ document.getElementById("start").classList.add("hidden");
+ document.getElementById("game").classList.remove("hidden");
+ resetBoard();
+}
+
+function resetBoard(){
+ board.fill("");
+ active=true;
+ current="X";
+ document.getElementById("status").innerText="Player X";
+ const b=document.getElementById("board");
+ b.innerHTML="";
+ for(let i=0;i<9;i++){
+  let c=document.createElement("div");
+  c.className="cell";
+  c.onclick=()=>move(i);
+  b.appendChild(c);
+ }
+}
+
+function move(i){
+ if(!active||board[i])return;
+ board[i]=current;
+ let c=document.getElementById("board").children[i];
+ c.innerText=current;
+ c.classList.add(current.toLowerCase());
+
+ let winLine = checkWin();
+ if(winLine){
+  winLine.forEach(i=>document.getElementById("board").children[i].classList.add("win"));
+  active=false;
+  document.getElementById("status").innerText=current+" Wins!";
+  current=="X"?sx++:so++;
+  updateScore();
+  return;
+ }
+
+ if(!board.includes("")){
+  sd++; updateScore();
+  document.getElementById("status").innerText="Draw!";
+  active=false; return;
+ }
+
+ current=current=="X"?"O":"X";
+ document.getElementById("status").innerText="Player "+current;
+
+ if(mode=="ai"&&current=="O")setTimeout(aiMove,400);
+}
+
+function aiMove(){
+ let best=-Infinity, move;
+ for(let i=0;i<9;i++){
+  if(!board[i]){
+   board[i]="O";
+   let s=minimax(board,0,false);
+   board[i]="";
+   if(s>best){best=s;move=i;}
+  }
+ }
+ move!=null && moveCell(move);
+}
+
+function moveCell(i){ move(i); }
+
+function minimax(b,d,isMax){
+ let r=evaluate();
+ if(r!==null)return r;
+ if(isMax){
+  let best=-Infinity;
+  for(let i=0;i<9;i++)if(!b[i]){
+   b[i]="O"; best=Math.max(best,minimax(b,d+1,false)); b[i]="";
+  }
+  return best;
+ } else {
+  let best=Infinity;
+  for(let i=0;i<9;i++)if(!b[i]){
+   b[i]="X"; best=Math.min(best,minimax(b,d+1,true)); b[i]="";
+  }
+  return best;
+ }
+}
+
+function evaluate(){
+ for(let w of wins){
+  let [a,b,c]=w;
+  if(board[a]&&board[a]==board[b]&&board[a]==board[c])
+   return board[a]=="O"?10:-10;
+ }
+ if(!board.includes(""))return 0;
+ return null;
+}
+
+function checkWin(){
+ return wins.find(w=>w.every(i=>board[i]==current));
+}
+
+function updateScore(){
+ sxEl.innerText=sx; soEl.innerText=so; sdEl.innerText=sd;
+}
+const sxEl=document.getElementById("sx");
+const soEl=document.getElementById("so");
+const sdEl=document.getElementById("sd");
+
+function changeTheme(){
+ t=(t+1)%themes.length;
+ document.body.className=themes[t];
+}
+</script>
+
+</body>
+</html>
